@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 void main() {
@@ -11,103 +13,210 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
+        textTheme: TextTheme(
+          headline1: TextStyle(fontSize: 60, color: Color(0xFFA0C1B8)),
+          subtitle1: TextStyle(color: Color(0xFFA0C1B8)),
+        ),
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: FitnessAppMainPage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
+class FitnessAppMainPage extends StatefulWidget{
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  _FitnessAppState createState() => _FitnessAppState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _FitnessAppState extends State<FitnessAppMainPage>{
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  @override
+  Widget build(BuildContext context){
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: Color(0xFF351F39),
+        child: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                StopwatchTitle(),
+                StopwatchTime(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class StopwatchTitle extends StatelessWidget{
+  @override
+  Widget build(BuildContext context){
+    return Column(
+      children: [
+        Text('Stopwatch', style: Theme.of(context).textTheme.headline1,),
+        Text('Echofi Takehome Project', style: Theme.of(context).textTheme.subtitle1,)
+      ],
+    );
+  }
+}
+
+class StopwatchTime extends StatefulWidget{
+  @override
+  _StopwatchState createState() => _StopwatchState();
+}
+
+class _StopwatchState extends State<StopwatchTime> with TickerProviderStateMixin{
+  Duration stopwatch = Duration();
+  Timer? timer;
+  late AnimationController _playPauseController;
+  late AnimationController _rotateController;
+  bool isRunning = false;
+
+  @override
+  void initState(){
+    super.initState();
+
+    // startTimer();
+    animateIcons();
   }
 
   @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
+  void dispose(){
+    _playPauseController.dispose();
+    _rotateController.dispose();
+    super.dispose();
+  }
+
+  void animateIcons(){
+    _playPauseController = AnimationController(vsync: this, duration: Duration(milliseconds: 250));
+    _rotateController = AnimationController(vsync: this, duration: Duration(milliseconds: 250));
+  }
+
+  /*
+  Increment time will take the current variable stopwatch duration in milliseconds and increment it by 10.
+  Then we set the the current stopwatch duration with the new duration
+   */
+  void incrementTime(){
+    setState(() {
+      int mil = stopwatch.inMilliseconds + 10;
+      stopwatch = Duration(milliseconds: mil);
+    });
+  }
+
+  /*
+  Start timer will start the icon button animation and then start the timer
+  How it works is every 10 milliseconds duration has passed, a callback is triggered which is the incrementTime
+   */
+  void startStopwatch() {
+    _playPauseController.forward();
+    timer = Timer.periodic(Duration(milliseconds: 10), (_) => incrementTime());
+  }
+
+  void stopStopwatch(){
+    _playPauseController.reverse();
+    setState(() {
+      timer?.cancel();
+    });
+  }
+
+  void _isRunning(){
+    setState(() {
+      isRunning = !isRunning;
+      isRunning ? startStopwatch() : stopStopwatch();
+      // isRunning ? _playPauseController.forward() : _playPauseController.reverse();
+    });
+  }
+
+  String showTime(){
+    // String mil = stopwatch.inMilliseconds.remainder(1000).toString().padLeft(2, '0').substring(0, 2);
+    String sec = stopwatch.inSeconds.remainder(60).toString().padLeft(2, '0');
+    String min = stopwatch.inMinutes.remainder(60).toString().padLeft(2, '0');
+    String hour = stopwatch.inHours.remainder(60).toString().padLeft(2, '0');
+
+    return '$hour:$min:$sec.';
+  }
+
+  String showMil(){
+    String mil = stopwatch.inMilliseconds.remainder(1000).toString().padLeft(2, '0').substring(0, 2);
+    return mil;
+  }
+
+  void _rotateIcon(){
+    if (_rotateController.isCompleted){
+      _rotateController.reset();
+      _rotateController.forward();
+    }
+    else {
+      _rotateController.forward();
+    }
+
+    stopwatch = Duration();
+    isRunning = false;
+    stopStopwatch();
+    // _rotateController.repeat();
+  }
+
+  @override
+  Widget build(BuildContext context){
+    return Column(
+      children: [
+        Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
+          children: [
+            Text(showTime(), style: Theme.of(context).textTheme.headline1,),
+            SizedBox(
+              width: 70,
+              child: Text(showMil(), style: Theme.of(context).textTheme.headline1,textAlign: TextAlign.end,),
+            )
+          ],
+        ),
+        // Text(showTime(), style: Theme.of(context).textTheme.headline1,),
+        SizedBox(height: 20,),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              decoration: !isRunning ? BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle
+              ) : BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle
+              ),
+              child: IconButton(
+                  iconSize: 60,
+                  onPressed: _isRunning,
+                  color: Colors.white,
+                  icon: AnimatedIcon(
+                    icon: AnimatedIcons.play_pause,
+                    progress: _playPauseController,
+                  )
+              ),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
+            SizedBox(width: 20,),
+            Container(
+              decoration: BoxDecoration(
+                  color: Color(0xFF719FB0),
+                  shape: BoxShape.circle
+              ),
+              child: RotationTransition(
+                turns: Tween(begin: 0.0, end: 1.0).animate(_rotateController),
+                child: IconButton(
+                    iconSize: 60,
+                    onPressed: _rotateIcon,
+                    icon: Icon(Icons.refresh, color: Colors.white,),
+                ),
+              ),
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      ],
     );
   }
 }
