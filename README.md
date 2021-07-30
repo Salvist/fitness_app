@@ -1,6 +1,6 @@
 # fitness_app
 
-A new Flutter project.
+Echofi Takehome Project
 
 ## Getting Started
 

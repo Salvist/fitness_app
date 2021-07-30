@@ -103,58 +103,54 @@ class _StopwatchState extends State<StopwatchTime> with TickerProviderStateMixin
     });
 
     if(loadSW){
-      String currentTime = getCurrentTime();
-
-      //Lap time
-      String startLapTime = (prefs.getString('startLapTime') ?? '');
-      String lastLapTime = (prefs.getString('lastLapTime') ?? '');
-      String lastLapMilliseconds = (prefs.getString('lastLapMilliseconds') ?? '00');
-
-      //Split time
-      String startSplitTime = (prefs.getString('startSplitTime') ?? '');
-      String lastSplitTime = (prefs.getString('lastSplitTime') ?? '');
-      String lastSplitMilliseconds = (prefs.getString('lastSplitMilliseconds') ?? '00');
-
-
-      DateFormat dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
-      DateTime curDateTime = dateFormat.parse(currentTime);
-
-      DateTime startDateTime = dateFormat.parse(startLapTime);
-      DateTime lastDateTime = dateFormat.parse(lastLapTime);
-      DateTime startSplitDate = dateFormat.parse(startSplitTime);
-      DateTime lastSplitDate =  dateFormat.parse(lastSplitTime);
-
-      print('LOAD\nstart lap: ' + startLapTime);
-      print('last lap: ' + lastLapTime);
 
       if(isRunning){
-        int hour = curDateTime.hour - lastDateTime.hour;
-        int min = curDateTime.minute - lastDateTime.minute;
-        int sec = curDateTime.second - lastDateTime.second;
+        //set stopwatch time first before calling startStopwatch()
+        //bl stands for before leave, meaning before the app was closed.
+        //al stands for after leave, meaning the app is opened again after closed.
+        String blTime = (prefs.getString('blTime') ?? 'null');
+        DateFormat df = DateFormat('HH:mm:ss');
 
-        int shour = curDateTime.hour - lastSplitDate.hour;
-        int smin = curDateTime.minute - lastSplitDate.minute;
-        int ssec = curDateTime.second - lastSplitDate.second;
+        DateTime alTimeDT = df.parse(getCurrentTime());
+        Duration alDur = Duration(hours: alTimeDT.hour, minutes: alTimeDT.minute, seconds: alTimeDT.second);
 
-        stopwatch = Duration(hours: hour, minutes: min, seconds: sec);
-        splitTime = Duration(hours: shour, minutes: smin, seconds: ssec);
+        DateTime blTimeDT = df.parse(blTime);
+        Duration blDur = Duration(hours: blTimeDT.hour, minutes: blTimeDT.minute, seconds: blTimeDT.second);
 
-        timer = Timer.periodic(Duration(milliseconds: 10), (_) => incrementTime());
-        _playPauseController.forward();
+        String startLapTime = (prefs.getString('startLapTime') ?? 'null');
+        String lastLapMilliseconds = (prefs.getString('lastLapMilliseconds') ?? '000');
+        DateFormat df2 = DateFormat('H:mm:ss');
+        DateTime startLapDT =  df2.parse(startLapTime);
+
+        Duration leftover = Duration(hours: startLapDT.hour, minutes: startLapDT.minute, seconds: startLapDT.second, milliseconds: int.parse(lastLapMilliseconds));
+
+        stopwatch = alDur - blDur + leftover;
+
+        //setting up splitTime duration
+        if(lapSplitTime.isNotEmpty){
+          DateFormat df3 = DateFormat('mm:ss');
+          DateTime lastSplitDT = df3.parse(lapSplitTime.last);
+          String lastSplitMilliseconds = (prefs.getString('lastSplitMilliseconds') ?? '000');
+          Duration tempSplitDur = Duration(minutes: lastSplitDT.minute, seconds: lastSplitDT.second, milliseconds: int.parse(lastSplitMilliseconds));
+          splitTime = tempSplitDur;
+        }
+
+        startStopwatch();
       }
       else {
-        int hour = lastDateTime.hour - startDateTime.hour;
-        int min = lastDateTime.minute - startDateTime.minute;
-        int sec = lastDateTime.second - startDateTime.second;
+        String lastLapTime = (prefs.getString('lastLapTime') ?? 'null');
+        String lastLapMilliseconds = (prefs.getString('lastLapMilliseconds') ?? '000');
 
-        int shour = lastSplitDate.hour - startSplitDate.hour;
-        int smin = lastSplitDate.minute - startSplitDate.minute;
-        int ssec = lastSplitDate.second - startSplitDate.second;
+        String lastSplitTime = (prefs.getString('lastSplitTime') ?? 'null');
+        String lastSplitMilliseconds = (prefs.getString('lastSplitMilliseconds') ?? '000');
 
-        stopwatch = Duration(hours: hour, minutes: min, seconds: sec, milliseconds: int.parse(lastLapMilliseconds));
-        splitTime = Duration(hours: shour, minutes: smin, seconds: ssec, milliseconds: int.parse(lastSplitMilliseconds));
+        DateFormat df = DateFormat('H:mm:ss');
 
+        DateTime lastLapDT = df.parse(lastLapTime);
+        stopwatch = Duration(hours: lastLapDT.hour, minutes: lastLapDT.minute, seconds: lastLapDT.second, milliseconds: int.parse(lastLapMilliseconds));
 
+        DateTime lastSplitDT = df.parse(lastSplitTime);
+        splitTime = Duration(hours: lastSplitDT.hour, minutes: lastSplitDT.minute, seconds: lastSplitDT.second, milliseconds: int.parse(lastSplitMilliseconds));
       }
     }
   }
@@ -177,11 +173,8 @@ class _StopwatchState extends State<StopwatchTime> with TickerProviderStateMixin
    */
   void incrementTime(){
     setState(() {
-      int mil1 = stopwatch.inMilliseconds + 10;
-      int mil2 = splitTime.inMilliseconds + 10;
-
-      stopwatch = Duration(milliseconds: mil1);
-      splitTime = Duration(milliseconds: mil2);
+      int mil = stopwatch.inMilliseconds + 10;
+      stopwatch = Duration(milliseconds: mil);
     });
   }
 
@@ -194,8 +187,8 @@ class _StopwatchState extends State<StopwatchTime> with TickerProviderStateMixin
 
     final prefs = await SharedPreferences.getInstance();
 
-    if((prefs.getString('startLapTime') ?? '') == '') prefs.setString('startLapTime', getCurrentTime());
-    if((prefs.getString('startSplitTime') ?? '') == '') prefs.setString('startSplitTime', getCurrentTime());
+    if((prefs.getString('startLapTime') ?? '') == '') prefs.setString('startLapTime', stopwatch.toString());
+    if((prefs.getString('startSplitTime') ?? '') == '') prefs.setString('startSplitTime', splitTime.toString());
     loadSW = true;
     prefs.setBool('loadSW', loadSW);
 
@@ -210,15 +203,10 @@ class _StopwatchState extends State<StopwatchTime> with TickerProviderStateMixin
 
     if(loadSW){
       final prefs = await SharedPreferences.getInstance();
-      prefs.setString('lastLapTime', getCurrentTime());
-      prefs.setString('lastSplitTime', getCurrentTime());
-      prefs.setString('lastLapMilliseconds', showMil(1));
-      prefs.setString('lastSplitMilliseconds', showMil(2));
-
-      String startLapTime = (prefs.getString('startLapTime') ?? 'null');
-      String lastLapTime = (prefs.getString('lastLapTime') ?? 'null');
-      print('start lap: ' + startLapTime);
-      print('last lap: ' + lastLapTime);
+      prefs.setString('lastLapTime', stopwatch.toString());
+      prefs.setString('lastSplitTime', splitTime.toString());
+      prefs.setString('lastLapMilliseconds', stopwatch.inMilliseconds.remainder(1000).toString());
+      prefs.setString('lastSplitMilliseconds', splitTime.inMilliseconds.remainder(1000).toString());
     }
   }
 
@@ -250,11 +238,11 @@ class _StopwatchState extends State<StopwatchTime> with TickerProviderStateMixin
 
   String showMil(int n){
     if(n == 1){
-      String mil = stopwatch.inMilliseconds.remainder(1000).toString().padLeft(2, '0').substring(0, 2);
+      String mil = stopwatch.inMilliseconds.remainder(1000).toString().padLeft(3, '0').substring(0, 2);
       return mil;
     }
     else {
-      String mil = splitTime.inMilliseconds.remainder(1000).toString().padLeft(2, '0').substring(0, 2);
+      String mil = splitTime.inMilliseconds.remainder(1000).toString().padLeft(3, '0').substring(0, 2);
       return mil;
     }
   }
@@ -285,6 +273,9 @@ class _StopwatchState extends State<StopwatchTime> with TickerProviderStateMixin
     prefs.remove('lastSplitMilliseconds');
 
 
+    prefs.remove('blTime');
+    prefs.remove('alTime');
+
     stopwatch = Duration();
     splitTime = Duration();
     isRunning = false;
@@ -297,6 +288,8 @@ class _StopwatchState extends State<StopwatchTime> with TickerProviderStateMixin
   void addLap() async {
     if(isRunning){
       lapTime.add(showTime(1) + showMil(1));
+
+      splitTime += stopwatch;
       lapSplitTime.add(showTime(2) + showMil(2));
 
       final prefs = await SharedPreferences.getInstance();
@@ -309,7 +302,7 @@ class _StopwatchState extends State<StopwatchTime> with TickerProviderStateMixin
 
   String getCurrentTime(){
     DateTime now = DateTime.now();
-    String time = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
+    String time = DateFormat('HH:mm:ss').format(now);
     return time;
   }
 
@@ -318,8 +311,13 @@ class _StopwatchState extends State<StopwatchTime> with TickerProviderStateMixin
 
     final prefs = await SharedPreferences.getInstance();
     if(isRunning){
-      if(prefs.getString('lastLapTime') != '') prefs.setString('lastLapTime', getCurrentTime());
+      //bl stands for before leave, meaning before the app is closed.
+      prefs.setString('blTime', getCurrentTime());
+      prefs.setString('startLapTime', stopwatch.toString());
+      prefs.setString('lastSplitMilliseconds', splitTime.inMilliseconds.remainder(1000).toString());
+      print(stopwatch.toString());
     }
+
     return true;
   }
 
