@@ -124,9 +124,13 @@ class _StopwatchState extends State<StopwatchTime> with TickerProviderStateMixin
 
         Duration leftover = Duration(hours: startLapDT.hour, minutes: startLapDT.minute, seconds: startLapDT.second, milliseconds: int.parse(lastLapMilliseconds));
 
+        //Using the time when the app is closed and the time when it is reopened,
+        //the different is the offline time (or how long the app was closed) and then added with the leftover time.
+        //leftover time is when the stopwatch was started until the app is closed.
         stopwatch = alDur - blDur + leftover;
 
         //setting up splitTime duration
+        //If the lapSplitTime list is not empty, it will take the last split time and convert it Duration object.
         if(lapSplitTime.isNotEmpty){
           DateFormat df3 = DateFormat('mm:ss');
           DateTime lastSplitDT = df3.parse(lapSplitTime.last);
